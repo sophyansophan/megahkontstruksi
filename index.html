@@ -19,8 +19,7 @@
     <!-- FontAwesome untuk Ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Tesseract.js untuk OCR (Membaca Teks dari Gambar) -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <!-- Tesseract.js DIHAPUS karena kita akan menggunakan Gemini AI yang jauh lebih pintar -->
 
     <style>
         body {
@@ -358,178 +357,107 @@
             uploadArea.classList.add('p-8');
         }
 
-        // Menjalankan OCR (Optical Character Recognition)
+        // =========================================================================
+        // IMPLEMENTASI GEMINI AI VISION (Membaca Gambar jadi Data JSON)
+        // =========================================================================
         async function extractDataFromReceipt(base64Image) {
-            showLoading("Memindai Data Bukti Transfer (AI)...");
+            showLoading("Gemini AI Sedang Menganalisis Bukti Transfer...");
             
             try {
-                const result = await Tesseract.recognize(base64Image, 'ind+eng');
-                const text = result.data.text;
-                console.log("Teks yang terdeteksi OCR:\n", text);
-                
-                // Panggil fungsi pintar parser data
-                const parsedData = parseReceiptData(text);
-                console.log("Hasil Parsing AI:", parsedData);
-                
-                hideLoading();
+                // 1. Siapkan Gambar (Buang prefix data:image/jpeg;base64,)
+                const base64Data = base64Image.split(',')[1];
+                let mimeType = "image/jpeg";
+                const mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/);
+                if(mimeMatch) mimeType = mimeMatch[1];
 
-                // Isi form dengan data hasil tebakan
-                if(parsedData.date) dateInput.value = parsedData.date;
-                if(parsedData.sourceBank) sourceBankInput.value = parsedData.sourceBank;
-                if(parsedData.sourceName) sourceNameInput.value = parsedData.sourceName;
-                if(parsedData.destBank) destBankInput.value = parsedData.destBank;
-                if(parsedData.destAccount) destAccountInput.value = parsedData.destAccount;
-                if(parsedData.destName) destNameInput.value = parsedData.destName;
-                if(parsedData.refNumber) refNumberInput.value = parsedData.refNumber;
-                if(parsedData.amount) amountInput.value = parsedData.amount;
-                if(parsedData.adminFee) adminFeeInput.value = parsedData.adminFee;
+                // 2. Siapkan Prompt / Perintah Khusus untuk Gemini
+                const promptText = `
+                    Kamu adalah asisten pendataan keuangan. Tugasmu adalah mengekstrak informasi dari gambar bukti transfer bank di Indonesia ini.
+                    KEMBALIKAN DALAM FORMAT JSON YANG VALID SESUAI SKEMA BERIKUT:
+                    {
+                        "date": "tanggal transfer dalam format YYYY-MM-DD",
+                        "sourceBank": "nama bank pengirim (contoh: BRI, BCA, Mandiri, dll)",
+                        "sourceName": "nama pemilik rekening pengirim",
+                        "destBank": "nama bank tujuan penerima",
+                        "destAccount": "nomor rekening tujuan (HANYA ANGKA tanpa spasi/simbol)",
+                        "destName": "nama penerima",
+                        "refNumber": "nomor referensi atau nomor struk transaksi",
+                        "amount": "nominal transfer pokok (HANYA ANGKA murni, tanpa titik/koma/Rp)",
+                        "adminFee": "biaya admin (HANYA ANGKA murni, jika gratis atau tidak ada isi 0)"
+                    }
+                    Jika ada informasi yang tidak tercantum di gambar, isi dengan string kosong "".
+                    PENTING: Jangan tambahkan teks markdown seperti \`\`\`json, kembalikan objek JSON murni saja.
+                `;
 
-                showModal('info', 'Selesai Memindai', 'Data berhasil diekstrak. Mohon periksa kembali kolom-kolom form dan pastikan sudah benar sebelum disimpan.');
-                descInput.focus();
+                // 3. Susun Payload untuk Gemini API
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: promptText },
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: base64Data
+                                }
+                            }
+                        ]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json", // Memaksa Gemini mereturn JSON
+                    }
+                };
+
+                // 4. Panggil Gemini API (Menggunakan Model Flash yang cepat)
+                const apiKey = "AQ.Ab8RN6KmkVKNOLt-Qz9HWmt6awVSsS91qlLmNyjXt2Y5hd9Yqw"; // DEVELOPER NOTE: Isi API Key Anda di sini sebelum diupload ke GitHub.
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+
+                const result = await response.json();
+                
+                // 5. Parse Hasil JSON dari Gemini
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+                    const jsonString = result.candidates[0].content.parts[0].text;
+                    const parsedData = JSON.parse(jsonString);
+                    
+                    console.log("Hasil Ekstraksi Gemini:", parsedData);
+                    hideLoading();
+
+                    // 6. Masukkan Hasil Gemini ke dalam Form
+                    if(parsedData.date) document.getElementById('dateInput').value = parsedData.date;
+                    if(parsedData.sourceBank) document.getElementById('sourceBankInput').value = parsedData.sourceBank;
+                    if(parsedData.sourceName) document.getElementById('sourceNameInput').value = parsedData.sourceName;
+                    if(parsedData.destBank) document.getElementById('destBankInput').value = parsedData.destBank;
+                    if(parsedData.destAccount) document.getElementById('destAccountInput').value = parsedData.destAccount;
+                    if(parsedData.destName) document.getElementById('destNameInput').value = parsedData.destName;
+                    if(parsedData.refNumber) document.getElementById('refNumberInput').value = parsedData.refNumber;
+                    if(parsedData.amount) document.getElementById('amountInput').value = parsedData.amount;
+                    if(parsedData.adminFee) document.getElementById('adminFeeInput').value = parsedData.adminFee;
+
+                    showModal('info', 'Sukses Dipindai', 'Data berhasil diekstrak oleh kecerdasan Gemini AI. Silakan periksa dan tambahkan keterangan.');
+                    document.getElementById('descInput').focus();
+
+                } else {
+                    throw new Error("Gagal mendapatkan respons valid dari Gemini.");
+                }
 
             } catch (error) {
                 hideLoading();
-                console.error("OCR Error: ", error);
-                showModal('error', 'Gagal Memindai', 'Terjadi kesalahan sistem. Silakan isi form manual.');
+                console.error("Gemini API Error: ", error);
+                showModal('error', 'Gagal Memindai', 'Gagal memproses gambar menggunakan Gemini API. Silakan pastikan API Key sudah benar dan koneksi internet stabil.');
             }
         }
 
-        // Fungsi Cerdas Parser (Logika Heuristik & Regex)
-        function parseReceiptData(text) {
-            let data = { date: '', sourceBank: '', sourceName: '', destBank: '', destAccount: '', destName: '', refNumber: '', amount: '', adminFee: '0' };
-            
-            // Bersihkan teks ekstra dan jadikan array per baris
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const textUpper = text.toUpperCase();
-
-            // 1. TANGGAL (Support teks seperti "20 Juli 2026")
-            const bulanMap = {
-                'JANUARI': '01', 'JAN': '01', 'FEBRUARI': '02', 'FEB': '02',
-                'MARET': '03', 'MAR': '03', 'APRIL': '04', 'APR': '04',
-                'MEI': '05', 'JUNI': '06', 'JUN': '06', 'JULI': '07', 'JUL': '07',
-                'AGUSTUS': '08', 'AGU': '08', 'SEPTEMBER': '09', 'SEP': '09',
-                'OKTOBER': '10', 'OKT': '10', 'NOVEMBER': '11', 'NOV': '11',
-                'DESEMBER': '12', 'DES': '12'
-            };
-            const dateTextRegex = /(\d{1,2})\s+([A-Z]+)\s+(\d{4})/i;
-            const dateMatchText = text.match(dateTextRegex);
-            if (dateMatchText) {
-                let day = dateMatchText[1].padStart(2, '0');
-                let monthStr = dateMatchText[2].toUpperCase();
-                let year = dateMatchText[3];
-                if (bulanMap[monthStr]) {
-                    data.date = `${year}-${bulanMap[monthStr]}-${day}`; // Format YYYY-MM-DD
-                }
-            }
-            // Fallback: Jika tanggal pakai angka biasa (DD/MM/YYYY)
-            if (!data.date) {
-                const dateNumMatch = text.match(/\b(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})\b/);
-                if (dateNumMatch) data.date = `${dateNumMatch[3]}-${dateNumMatch[2]}-${dateNumMatch[1]}`;
-            }
-
-            // 2. NOMOR REFERENSI (Support format "No. Ref 1800...")
-            const refRegex = /(?:REF|REFERENSI|NO\.?\s*REF)[\.\:\-]?\s*([A-Z0-9]{8,20})/i;
-            const refMatch = text.match(refRegex);
-            if (refMatch) data.refNumber = refMatch[1];
-
-            // 3. UANG (Mencari berdasarkan baris yang mengandung kata kunci)
-            let foundNominal = false;
-            let foundAdmin = false;
-            
-            // Fungsi penolong pembersih angka
-            let getAmount = (str) => {
-                let m = str.match(/(?:Rp|IDR)?\s*([\d]{1,3}(?:[\.\,]\d{3})+)/i); // Tangkap angka berformat titik
-                if (m) return m[1].replace(/[\.\,]/g, ''); // Hapus titik ribuan
-                return null;
-            };
-
-            for (let i = 0; i < lines.length; i++) {
-                let lineUp = lines[i].toUpperCase();
-                
-                // Cari kata "Nominal" di baris itu
-                if (lineUp.includes('NOMINAL') && !lineUp.includes('TOTAL')) {
-                    let amt = getAmount(lineUp);
-                    if (!amt && i+1 < lines.length) amt = getAmount(lines[i+1]); // Cek baris bawahnya
-                    if (amt) { data.amount = amt; foundNominal = true; }
-                }
-                
-                // Cari kata "Biaya Admin"
-                if (lineUp.includes('BIAYA ADMIN') || lineUp.includes('ADMIN')) {
-                    let amt = getAmount(lineUp);
-                    if (!amt && i+1 < lines.length) amt = getAmount(lines[i+1]);
-                    if (amt) { data.adminFee = amt; foundAdmin = true; }
-                }
-            }
-
-            // Fallback Nominal: Jika gagal deteksi label Nominal, baru pakai tebakan angka terbesar
-            if (!foundNominal) {
-                const moneyRegex = /\b\d{1,3}(?:[\.\,]\d{3})+\b/g;
-                let amounts = [];
-                let m;
-                while ((m = moneyRegex.exec(text)) !== null) {
-                    amounts.push(parseInt(m[0].replace(/[\.\,]/g, ''), 10));
-                }
-                if (amounts.length > 0) {
-                    amounts = [...new Set(amounts)]; // Hapus duplikat
-                    amounts.sort((a, b) => b - a); // Urutkan terbesar
-                    
-                    // Jika ada total + nominal, biasanya selisihnya adalah admin (2500, 6500)
-                    if (amounts.length >= 2 && [2500, 6500, 1000, 0].includes(amounts[0] - amounts[1])) {
-                        data.amount = amounts[1].toString(); // Ambil yg lebih kecil (Nominal asli)
-                    } else {
-                        data.amount = amounts[0].toString(); // Ambil mutlak paling besar
-                    }
-                }
-            }
-
-            // 4. MENCARI INFO BANK, REKENING, & NAMA (Membaca Zona "Sumber" dan "Tujuan")
-            let bankList = ["BCA", "BRI", "BNI", "MANDIRI", "BSI", "CIMB", "PERMATA", "JAGO", "SEABANK", "OVO", "DANA", "GOPAY", "SHOPEEPAY", "LINKAJA", "BJB", "DKI"];
-            
-            let parseSection = (startIndex, isSource) => {
-                 // Baca maksimal 6 baris ke bawah setelah menemukan kata kunci (Tujuan / Sumber)
-                 let limit = Math.min(startIndex + 6, lines.length);
-                 for(let i = startIndex + 1; i < limit; i++) {
-                     let line = lines[i].toUpperCase();
-                     
-                     // Tangkap Nama Bank
-                     if ((isSource && !data.sourceBank) || (!isSource && !data.destBank)) {
-                         let b = bankList.find(bank => line.includes(bank));
-                         if (b) {
-                             if (isSource) data.sourceBank = b;
-                             else data.destBank = b;
-                         }
-                     }
-
-                     // Tangkap Nomor Rekening (Abaikan/hapus spasi jika angkanya terputus-putus)
-                     let cleanNum = line.replace(/\s+/g, '');
-                     if (!isSource && cleanNum.match(/^\d{9,16}$/)) { 
-                         // Nomor rekening tujuan biasanya 9-16 digit tanpa bintang
-                         data.destAccount = cleanNum;
-                     }
-
-                     // Tangkap Nama Orang (Bukan angka, bukan label bank, dan hurufnya agak panjang)
-                     if (!line.match(/\d/) && !bankList.some(b => line.includes(b)) && !line.includes("BANK") && line.length > 3) {
-                         if (isSource && !data.sourceName) data.sourceName = lines[i];
-                         else if (!isSource && !data.destName) data.destName = lines[i];
-                     }
-                 }
-            };
-
-            for (let i = 0; i < lines.length; i++) {
-                let l = lines[i].toUpperCase();
-                // Jika ketemu label awal blok
-                if (l.includes("SUMBER DANA") || l.includes("PENGIRIM") || l.includes("DARI")) {
-                    parseSection(i, true);
-                }
-                if (l.includes("TUJUAN") || l.includes("PENERIMA") || l.includes("KE PADA") || l.includes("KE REKENING")) {
-                    parseSection(i, false);
-                }
-            }
-
-            return data;
-        }
-
-        // Menangani pengiriman form dan foto ke backend
+        // =========================================================================
+        // Menangani pengiriman form dan foto ke backend Google Apps Script
+        // =========================================================================
         submitBtn.addEventListener('click', async () => {
             // 1. Validasi Form
             if (!currentBase64Image) {
@@ -541,7 +469,7 @@
                 return;
             }
             
-            if(APP_SCRIPT_URL === "ISI_URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI") {
+            if(APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycby-QuJfwSiq-IuT5SPdbQ0jNyRuTek618pb9XT8bBgk5b5yhqfGEi0n0vzZOLUs8bYc/exec") {
                 showModal('error', 'Konfigurasi Diperlukan', 'Developer Note: Harap ganti variabel APP_SCRIPT_URL pada source code HTML dengan Web App URL Google Apps Script Anda.');
                 return;
             }
