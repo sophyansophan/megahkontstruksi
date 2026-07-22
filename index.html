@@ -51,6 +51,11 @@
                 <div id="imagePreviewContainer" class="hidden relative">
                     <img id="imagePreview" class="w-full max-h-64 object-contain rounded-lg shadow-sm" src="" alt="Preview Bukti">
                     <div class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-red-600 active:scale-90" id="removeImageBtn"><i class="fa-solid fa-times"></i></div>
+                    
+                    <!-- Tombol AI yang akan muncul saat foto dipilih -->
+                    <button type="button" id="scanAIBtn" class="mt-3 w-full bg-gradient-to-r from-indigo-500 to-blue-600 hover:from-indigo-600 hover:to-blue-700 text-white font-bold py-2.5 px-4 rounded-xl shadow-md active:scale-95 transition-all flex justify-center items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> Ekstrak Data Pakai AI
+                    </button>
                 </div>
             </label>
             <input type="file" id="imageInput" accept="image/*">
@@ -363,9 +368,20 @@
                 imageElements.placeholder.classList.add('hidden');
                 imageElements.container.classList.remove('hidden');
                 imageElements.area.classList.replace('p-8', 'p-2');
-                extractDataFromReceipt(currentBase64Image);
+                // Proses ekstrak otomatis AI dihapus dari sini
             };
             reader.readAsDataURL(file);
+        });
+
+        // Event listener BARU untuk tombol AI
+        document.getElementById('scanAIBtn').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Mencegah klik area upload memicu pilih foto lagi
+            if (currentBase64Image) {
+                extractDataFromReceipt(currentBase64Image);
+            } else {
+                showModal('error', 'Tidak Ada Bukti', 'Silakan upload foto bukti terlebih dahulu.');
+            }
         });
 
         imageElements.remove.addEventListener('click', (e) => {
