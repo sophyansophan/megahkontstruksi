@@ -5,191 +5,210 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Keuangan Kontraktor</title>
     
-    <!-- PWA Manifest & Theme Color -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1e3a8a">
     <link rel="apple-touch-icon" href="icon.png">
     
-    <!-- Tailwind CSS untuk Styling Responsif ala Aplikasi Mobile -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts (Inter) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- FontAwesome untuk Ikon -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Tesseract.js DIHAPUS karena kita akan menggunakan Gemini AI yang jauh lebih pintar -->
-
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f1f5f9; /* Slate 100 */
-            -webkit-tap-highlight-color: transparent;
-        }
-        /* Membatasi lebar aplikasi di desktop agar terlihat seperti aplikasi mobile */
-        .app-container {
-            max-width: 480px;
-            margin: 0 auto;
-            min-height: 100vh;
-            background-color: #ffffff;
-            box-shadow: 0 0 20px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-        }
-        
-        /* Animasi loading spinner */
-        .loader {
-            border: 3px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 3px solid #1e3a8a;
-            width: 24px;
-            height: 24px;
-            -webkit-animation: spin 1s linear infinite; /* Safari */
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Styling kustom file input agar tak terlihat bawaan browser */
-        input[type="file"] {
-            display: none;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; -webkit-tap-highlight-color: transparent; }
+        .app-container { max-width: 480px; margin: 0 auto; height: 100vh; background-color: #ffffff; display: flex; flex-direction: column; position: relative; box-shadow: 0 0 20px rgba(0,0,0,0.05); overflow: hidden; }
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #1e3a8a; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        input[type="file"] { display: none; }
+        .tab-content { display: none; flex: 1; overflow-y: auto; padding-bottom: 90px; } /* Padding for bottom nav */
+        .tab-content.active { display: block; }
+        .nav-item.active { color: #1e3a8a; font-weight: bold; }
+        .nav-item.active i { transform: scale(1.1); transition: all 0.2s; }
     </style>
 </head>
 <body>
 
     <div class="app-container">
-        <!-- App Bar / Header -->
+        <!-- App Bar -->
         <header class="bg-blue-900 text-white p-4 sticky top-0 z-20 flex justify-between items-center shadow-md">
             <div class="flex items-center gap-3">
                 <i class="fa-solid fa-wallet text-xl"></i>
-                <h1 class="text-lg font-bold tracking-wide">Data Keuangan</h1>
+                <h1 class="text-lg font-bold tracking-wide" id="appTitle">Data Keuangan</h1>
             </div>
             <button id="installBtn" class="hidden text-xs bg-white text-blue-900 px-3 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform">
                 <i class="fa-solid fa-download mr-1"></i> Install
             </button>
         </header>
 
-        <main class="flex-1 overflow-y-auto p-5 pb-24">
+        <main id="tab-input" class="tab-content active p-5">
+            <p class="text-gray-500 text-sm mb-4">Upload bukti transfer untuk mengekstrak data nominal secara otomatis menggunakan Gemini AI.</p>
             
-            <p class="text-gray-500 text-sm mb-4">Upload bukti transfer untuk mengekstrak data nominal secara otomatis.</p>
-
-            <!-- Area Upload Gambar -->
             <label for="imageInput" class="block w-full border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors rounded-xl p-8 text-center cursor-pointer mb-6" id="uploadArea">
                 <div id="uploadPlaceholder">
                     <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 mb-3"></i>
                     <h3 class="text-blue-800 font-semibold mb-1">Tap untuk Upload Bukti</h3>
                     <p class="text-xs text-blue-400">JPG, PNG atau Kamera</p>
                 </div>
-                
-                <!-- Preview Gambar (Hidden By Default) -->
                 <div id="imagePreviewContainer" class="hidden relative">
-                    <img id="imagePreview" class="w-full max-h-64 object-contain rounded-lg shadow-sm" src="" alt="Preview Bukti Transfer">
-                    <div class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-red-600 active:scale-90 transition-transform" id="removeImageBtn" title="Hapus Gambar">
-                        <i class="fa-solid fa-times"></i>
-                    </div>
+                    <img id="imagePreview" class="w-full max-h-64 object-contain rounded-lg shadow-sm" src="" alt="Preview Bukti">
+                    <div class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-red-600 active:scale-90" id="removeImageBtn"><i class="fa-solid fa-times"></i></div>
                 </div>
             </label>
             <input type="file" id="imageInput" accept="image/*" capture="environment">
 
-            <!-- Form Data Keuangan -->
             <form id="dataForm" class="space-y-4">
-                
-                <!-- Tanggal -->
+                <!-- Dropdown Proyek (BARU) -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Pilih Proyek *</label>
+                    <select id="projectInput" required class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                        <!-- Opsi akan diisi dari setting via JS -->
+                    </select>
+                </div>
+
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Transfer</label>
                     <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fa-regular fa-calendar text-gray-400"></i>
-                        </div>
-                        <input type="date" id="dateInput" required class="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm text-sm">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-regular fa-calendar text-gray-400"></i></div>
+                        <input type="date" id="dateInput" required class="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
                     </div>
                 </div>
 
-                <!-- Info Asal -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Bank Asal</label>
-                        <input type="text" id="sourceBankInput" placeholder="Contoh: BCA" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                        <input type="text" id="sourceBankInput" placeholder="Contoh: BCA" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Asal</label>
-                        <input type="text" id="sourceNameInput" placeholder="Nama Pengirim" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                        <input type="text" id="sourceNameInput" placeholder="Nama Pengirim" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                     </div>
                 </div>
 
-                <!-- Info Tujuan -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Bank Tujuan</label>
-                        <input type="text" id="destBankInput" placeholder="Contoh: BRI" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                        <input type="text" id="destBankInput" placeholder="Contoh: BRI" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">No. Rek Tujuan</label>
-                        <input type="number" id="destAccountInput" placeholder="No Rekening" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                        <input type="number" id="destAccountInput" placeholder="No Rekening" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
                     </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Tujuan</label>
-                    <input type="text" id="destNameInput" placeholder="Nama Penerima" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Tujuan</label>
+                        <input type="text" id="destNameInput" placeholder="Nama Penerima" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">No. Referensi</label>
+                        <input type="text" id="refNumberInput" placeholder="No Ref" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white text-sm font-mono">
+                    </div>
                 </div>
 
-                <!-- No Referensi -->
-                <div>
-                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nomor Referensi</label>
-                    <input type="text" id="refNumberInput" placeholder="No Ref / Transaksi" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm font-mono">
-                </div>
-
-                <!-- Nominal & Admin -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-blue-800 mb-1">Nominal (Rp) *</label>
-                        <input type="number" id="amountInput" required placeholder="0" class="w-full p-2.5 rounded-lg border-2 border-blue-400 focus:ring-2 focus:ring-blue-500 bg-blue-50 shadow-sm font-bold text-blue-900">
+                        <input type="number" id="amountInput" required placeholder="0" class="w-full p-2.5 rounded-lg border-2 border-blue-400 focus:ring-2 focus:ring-blue-500 bg-blue-50 font-bold text-blue-900">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Biaya Admin (Rp)</label>
-                        <input type="number" id="adminFeeInput" value="0" placeholder="0" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                        <input type="number" id="adminFeeInput" value="0" placeholder="0" class="w-full p-2.5 rounded-lg border border-gray-300 bg-white text-sm">
                     </div>
                 </div>
 
-                <!-- Keterangan -->
                 <div>
                     <label class="block text-xs font-semibold text-gray-700 mb-1">Keterangan / Keperluan *</label>
-                    <textarea id="descInput" required rows="2" placeholder="Contoh: Material proyek A..." class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm"></textarea>
+                    <textarea id="descInput" required rows="2" placeholder="Contoh: Material pasir 2 truk..." class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm"></textarea>
                 </div>
                 
+                <button type="button" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2 mt-4">
+                    <i class="fa-solid fa-paper-plane"></i> Simpan Data ke Cloud
+                </button>
             </form>
         </main>
 
-        <!-- Sticky Bottom Button -->
-        <div class="absolute bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-10">
-            <button type="button" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                <i class="fa-solid fa-paper-plane"></i> Simpan Data ke Cloud
-            </button>
-        </div>
+        <main id="tab-dashboard" class="tab-content bg-gray-50 p-5">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Ringkasan</h2>
+                <button id="refreshDashboardBtn" class="bg-white p-2 rounded-full shadow-sm text-blue-600 active:scale-90"><i class="fa-solid fa-arrows-rotate"></i></button>
+            </div>
+            
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 text-white shadow-md">
+                    <p class="text-xs text-blue-100 mb-1">Total Pengeluaran</p>
+                    <h3 class="text-lg font-bold truncate" id="dashTotalAmount">Rp 0</h3>
+                </div>
+                <div class="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                    <p class="text-xs text-gray-500 mb-1">Total Transaksi</p>
+                    <h3 class="text-lg font-bold text-gray-800" id="dashTotalCount">0</h3>
+                </div>
+            </div>
 
-        <!-- Custom Modal (Menghindari penggunaan alert bawaan browser) -->
-        <div id="customModal" class="fixed inset-0 bg-black/60 z-50 hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-transform scale-95 opacity-0" id="modalContent">
-                
-                <div id="modalIcon" class="mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-3xl">
-                    <!-- Ikon dimuat oleh JavaScript -->
+            <h3 class="text-sm font-bold text-gray-700 mb-3 border-b pb-2">Riwayat Terbaru</h3>
+            
+            <!-- List Container -->
+            <div id="dashboardList" class="space-y-3 pb-4">
+                <div class="text-center text-gray-400 py-10 text-sm">
+                    <i class="fa-solid fa-folder-open text-3xl mb-2 opacity-50"></i><br>
+                    Klik tombol refresh untuk memuat data
+                </div>
+            </div>
+        </main>
+
+        <main id="tab-settings" class="tab-content p-5">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Pengaturan Aplikasi</h2>
+            <p class="text-sm text-gray-500 mb-6">Konfigurasi rahasia Anda tersimpan aman secara lokal di memori HP ini.</p>
+
+            <form id="settingsForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Gemini API Key</label>
+                    <input type="password" id="setApiKey" placeholder="AIzaSy..." class="w-full p-3 rounded-lg border border-gray-300 bg-white text-sm font-mono">
+                    <p class="text-xs text-gray-400 mt-1">Dapatkan di aistudio.google.com</p>
                 </div>
                 
-                <h3 id="modalTitle" class="text-xl font-bold text-center text-gray-800 mb-2">Judul</h3>
-                <p id="modalMessage" class="text-center text-gray-600 mb-6 text-sm">Pesan Modal</p>
-                
-                <button id="modalCloseBtn" class="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-200 active:scale-95 transition-transform">
-                    Tutup
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Google Apps Script URL (Web App)</label>
+                    <input type="text" id="setScriptUrl" placeholder="https://script.google.com/macros/s/..." class="w-full p-3 rounded-lg border border-gray-300 bg-white text-sm font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Daftar Proyek</label>
+                    <p class="text-xs text-gray-400 mb-2">Pisahkan tiap nama proyek dengan baris baru (Enter)</p>
+                    <textarea id="setProjects" rows="4" class="w-full p-3 rounded-lg border border-gray-300 bg-white text-sm" placeholder="Proyek A&#10;Proyek B&#10;Kantor Pusat"></textarea>
+                </div>
+
+                <button type="button" id="saveSettingsBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-md active:scale-95 transition-all">
+                    <i class="fa-solid fa-save mr-2"></i> Simpan Pengaturan
                 </button>
+            </form>
+        </main>
+
+        <nav class="absolute bottom-0 left-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-16 z-30 pb-safe">
+            <button class="nav-item active flex-1 h-full flex flex-col items-center justify-center text-gray-400" data-target="tab-input">
+                <i class="fa-solid fa-pen-to-square text-xl mb-1"></i>
+                <span class="text-[10px]">Input</span>
+            </button>
+            <button class="nav-item flex-1 h-full flex flex-col items-center justify-center text-gray-400" data-target="tab-dashboard">
+                <i class="fa-solid fa-chart-pie text-xl mb-1"></i>
+                <span class="text-[10px]">Dashboard</span>
+            </button>
+            <button class="nav-item flex-1 h-full flex flex-col items-center justify-center text-gray-400" data-target="tab-settings">
+                <i class="fa-solid fa-gear text-xl mb-1"></i>
+                <span class="text-[10px]">Pengaturan</span>
+            </button>
+        </nav>
+
+        <!-- Modals & Overlays -->
+        <div id="customModal" class="fixed inset-0 bg-black/60 z-50 hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-transform scale-95 opacity-0" id="modalContent">
+                <div id="modalIcon" class="mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-3xl"></div>
+                <h3 id="modalTitle" class="text-xl font-bold text-center text-gray-800 mb-2"></h3>
+                <p id="modalMessage" class="text-center text-gray-600 mb-6 text-sm"></p>
+                <button id="modalCloseBtn" class="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl active:scale-95 transition-transform">Tutup</button>
             </div>
         </div>
 
-        <!-- Loading Overlay Kustom -->
         <div id="loadingOverlay" class="fixed inset-0 bg-black/50 z-[60] hidden flex-col items-center justify-center backdrop-blur-sm">
             <div class="bg-white p-5 rounded-2xl flex items-center gap-4 shadow-xl">
                 <div class="loader"></div>
@@ -199,365 +218,344 @@
     </div>
 
     <script>
-        // =========================================================================
-        // KONFIGURASI PENTING (Ganti URL di bawah dengan Web App URL Apps Script Anda)
-        // =========================================================================
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-QuJfwSiq-IuT5SPdbQ0jNyRuTek618pb9XT8bBgk5b5yhqfGEi0n0vzZOLUs8bYc/exec"; 
+        // Manajemen State Settings menggunakan LocalStorage
+        let appSettings = JSON.parse(localStorage.getItem('keuangan_settings')) || {
+            scriptUrl: '',
+            apiKey: '',
+            projects: ['Proyek Utama', 'Operasional']
+        };
 
-        // Registrasi Service Worker PWA
+        // Service Worker
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Mencegah error di environment Preview (seperti blob: atau file://)
-                // PWA hanya aktif jika dihosting di HTTP/HTTPS sungguhan (misal: GitHub Pages)
                 if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
-                    navigator.serviceWorker.register('sw.js')
-                        .then(reg => console.log('Service Worker Registered!', reg))
-                        .catch(err => console.warn('Service Worker Registration Skipped/Failed (Wajar jika di mode preview):', err.message));
-                } else {
-                    console.log('Mode Preview Aktif: Service Worker tidak diregistrasi untuk menghindari error protokol.');
+                    navigator.serviceWorker.register('sw.js').catch(() => {});
                 }
             });
         }
 
-        // Penanganan Install PWA Prompt
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.classList.remove('hidden'); // Tampilkan tombol instalasi
-        });
-        
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt !== null) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    deferredPrompt = null;
-                    installBtn.classList.add('hidden');
-                }
-            }
-        });
-
-        // Set Default Date (Hari ini)
-        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
-
         // DOM Elements
-        const imageInput = document.getElementById('imageInput');
-        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
-        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
-        const imagePreview = document.getElementById('imagePreview');
-        const removeImageBtn = document.getElementById('removeImageBtn');
-        
-        // Form Inputs
-        const dateInput = document.getElementById('dateInput');
-        const sourceBankInput = document.getElementById('sourceBankInput');
-        const sourceNameInput = document.getElementById('sourceNameInput');
-        const destBankInput = document.getElementById('destBankInput');
-        const destAccountInput = document.getElementById('destAccountInput');
-        const destNameInput = document.getElementById('destNameInput');
-        const refNumberInput = document.getElementById('refNumberInput');
-        const amountInput = document.getElementById('amountInput');
-        const adminFeeInput = document.getElementById('adminFeeInput');
-        const descInput = document.getElementById('descInput');
-        
-        const submitBtn = document.getElementById('submitBtn');
-        const uploadArea = document.getElementById('uploadArea');
+        const formElements = {
+            date: document.getElementById('dateInput'),
+            project: document.getElementById('projectInput'),
+            sourceBank: document.getElementById('sourceBankInput'),
+            sourceName: document.getElementById('sourceNameInput'),
+            destBank: document.getElementById('destBankInput'),
+            destAccount: document.getElementById('destAccountInput'),
+            destName: document.getElementById('destNameInput'),
+            refNumber: document.getElementById('refNumberInput'),
+            amount: document.getElementById('amountInput'),
+            adminFee: document.getElementById('adminFeeInput'),
+            desc: document.getElementById('descInput')
+        };
+        const imageElements = {
+            input: document.getElementById('imageInput'),
+            preview: document.getElementById('imagePreview'),
+            container: document.getElementById('imagePreviewContainer'),
+            placeholder: document.getElementById('uploadPlaceholder'),
+            area: document.getElementById('uploadArea'),
+            remove: document.getElementById('removeImageBtn')
+        };
+        let currentBase64Image = null;
 
-        let currentBase64Image = null; // Menyimpan data gambar saat ini
+        // Inisialisasi Aplikasi
+        function initApp() {
+            formElements.date.value = new Date().toISOString().split('T')[0];
+            renderProjectOptions();
+            loadSettingsToForm();
+        }
 
-        // Fungsi kontrol UI
+        // Tab Navigation
+        const navItems = document.querySelectorAll('.nav-item');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                // Hapus active class
+                navItems.forEach(nav => nav.classList.remove('active'));
+                tabContents.forEach(tab => tab.classList.remove('active'));
+                
+                // Set active class
+                item.classList.add('active');
+                const targetTab = document.getElementById(item.getAttribute('data-target'));
+                targetTab.classList.add('active');
+
+                document.getElementById('appTitle').innerText = 
+                    item.getAttribute('data-target') === 'tab-input' ? 'Data Keuangan' : 
+                    item.getAttribute('data-target') === 'tab-dashboard' ? 'Dashboard' : 'Pengaturan';
+                
+                // Auto load dashboard
+                if (item.getAttribute('data-target') === 'tab-dashboard' && document.getElementById('dashboardList').children.length <= 1) {
+                    fetchDashboardData();
+                }
+            });
+        });
+
+        // Settings Logic
+        function loadSettingsToForm() {
+            document.getElementById('setApiKey').value = appSettings.apiKey;
+            document.getElementById('setScriptUrl').value = appSettings.scriptUrl;
+            document.getElementById('setProjects').value = appSettings.projects.join('\n');
+        }
+
+        function renderProjectOptions() {
+            const select = formElements.project;
+            select.innerHTML = '<option value="" disabled selected>-- Pilih Proyek --</option>';
+            appSettings.projects.forEach(proj => {
+                if (proj.trim()) {
+                    const opt = document.createElement('option');
+                    opt.value = proj.trim();
+                    opt.innerText = proj.trim();
+                    select.appendChild(opt);
+                }
+            });
+        }
+
+        document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+            appSettings.apiKey = document.getElementById('setApiKey').value.trim();
+            appSettings.scriptUrl = document.getElementById('setScriptUrl').value.trim();
+            
+            const projectsText = document.getElementById('setProjects').value;
+            appSettings.projects = projectsText.split('\n').filter(p => p.trim() !== '');
+            
+            localStorage.setItem('keuangan_settings', JSON.stringify(appSettings));
+            renderProjectOptions();
+            
+            showModal('success', 'Tersimpan', 'Pengaturan berhasil disimpan di memori HP.');
+        });
+
         function showLoading(text) {
             document.getElementById('loadingText').innerText = text;
             document.getElementById('loadingOverlay').classList.remove('hidden');
             document.getElementById('loadingOverlay').classList.add('flex');
         }
-
         function hideLoading() {
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            document.getElementById('loadingOverlay').classList.remove('flex');
+            document.getElementById('loadingOverlay').classList.add('hidden', 'flex');
         }
-
         function showModal(type, title, message) {
             const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            const iconDiv = document.getElementById('modalIcon');
-            
-            // Konfigurasi tipe ikon dan warna
-            if(type === 'success') {
-                iconDiv.className = 'mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl bg-green-100 text-green-500';
-                iconDiv.innerHTML = '<i class="fa-solid fa-check"></i>';
-            } else if (type === 'error') {
-                iconDiv.className = 'mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl bg-red-100 text-red-500';
-                iconDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
-            } else {
-                iconDiv.className = 'mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl bg-blue-100 text-blue-500';
-                iconDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
-            }
-
+            const content = document.getElementById('modalContent');
+            const icon = document.getElementById('modalIcon');
+            icon.className = `mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl ${type === 'success' ? 'bg-green-100 text-green-500' : type === 'error' ? 'bg-red-100 text-red-500' : 'bg-blue-100 text-blue-500'}`;
+            icon.innerHTML = type === 'success' ? '<i class="fa-solid fa-check"></i>' : type === 'error' ? '<i class="fa-solid fa-triangle-exclamation"></i>' : '<i class="fa-solid fa-info"></i>';
             document.getElementById('modalTitle').innerText = title;
             document.getElementById('modalMessage').innerText = message;
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            // Sedikit delay untuk animasi scale-in
-            setTimeout(() => {
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
-            }, 10);
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            setTimeout(() => { content.classList.remove('scale-95', 'opacity-0'); content.classList.add('scale-100', 'opacity-100'); }, 10);
         }
-
         document.getElementById('modalCloseBtn').addEventListener('click', () => {
-            const modal = document.getElementById('customModal');
-            const modalContent = document.getElementById('modalContent');
-            modalContent.classList.remove('scale-100', 'opacity-100');
-            modalContent.classList.add('scale-95', 'opacity-0');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }, 300); // Waktu transisi css
+            document.getElementById('modalContent').classList.remove('scale-100', 'opacity-100');
+            document.getElementById('modalContent').classList.add('scale-95', 'opacity-0');
+            setTimeout(() => { document.getElementById('customModal').classList.add('hidden'); document.getElementById('customModal').classList.remove('flex'); }, 300);
         });
 
-        // Menangani input file gambar
-        imageInput.addEventListener('change', function(e) {
+        function formatRupiah(angka) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(angka);
+        }
+
+        imageElements.input.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(event) {
+            reader.onload = (event) => {
                 currentBase64Image = event.target.result;
-                
-                // Tampilkan Preview
-                imagePreview.src = currentBase64Image;
-                uploadPlaceholder.classList.add('hidden');
-                imagePreviewContainer.classList.remove('hidden');
-                uploadArea.classList.remove('p-8');
-                uploadArea.classList.add('p-2'); // Kurangi padding jika ada gambar
-
-                // Jalankan ekstraksi teks (OCR) secara otomatis
+                imageElements.preview.src = currentBase64Image;
+                imageElements.placeholder.classList.add('hidden');
+                imageElements.container.classList.remove('hidden');
+                imageElements.area.classList.replace('p-8', 'p-2');
                 extractDataFromReceipt(currentBase64Image);
             };
             reader.readAsDataURL(file);
         });
 
-        // Menghapus gambar yang sudah dipilih
-        removeImageBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Cegah upload form memicu label click
-            e.stopPropagation();
-            resetImageInput();
+        imageElements.remove.addEventListener('click', (e) => {
+            e.preventDefault(); e.stopPropagation(); resetFormUI();
         });
 
-        function resetImageInput() {
-            imageInput.value = '';
-            currentBase64Image = null;
-            imagePreview.src = '';
-            imagePreviewContainer.classList.add('hidden');
-            uploadPlaceholder.classList.remove('hidden');
-            uploadArea.classList.remove('p-2');
-            uploadArea.classList.add('p-8');
+        function resetFormUI() {
+            imageElements.input.value = ''; currentBase64Image = null; imageElements.preview.src = '';
+            imageElements.container.classList.add('hidden'); imageElements.placeholder.classList.remove('hidden');
+            imageElements.area.classList.replace('p-2', 'p-8');
+            document.getElementById('dataForm').reset();
+            formElements.date.value = new Date().toISOString().split('T')[0];
+            formElements.adminFee.value = "0";
         }
 
-        // =========================================================================
-        // IMPLEMENTASI GEMINI AI VISION (Membaca Gambar jadi Data JSON)
-        // =========================================================================
         async function extractDataFromReceipt(base64Image) {
-            showLoading("Gemini AI Sedang Menganalisis Bukti Transfer...");
-            
-            try {
-                // 1. Siapkan Gambar (Buang prefix data:image/jpeg;base64,)
-                const base64Data = base64Image.split(',')[1];
-                let mimeType = "image/jpeg";
-                const mimeMatch = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/);
-                if(mimeMatch) mimeType = mimeMatch[1];
+            if (!appSettings.apiKey) {
+                showModal('error', 'API Key Kosong', 'Silakan masukkan Gemini API Key di menu Pengaturan terlebih dahulu.');
+                return;
+            }
 
-                // 2. Siapkan Prompt / Perintah Khusus untuk Gemini
+            showLoading("AI Sedang Menganalisis Bukti...");
+            try {
+                const base64Data = base64Image.split(',')[1];
+                let mimeType = base64Image.match(/data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+).*,.*/)?.[1] || "image/jpeg";
+
                 const promptText = `
-                    Kamu adalah asisten pendataan keuangan. Tugasmu adalah mengekstrak informasi dari gambar bukti transfer bank di Indonesia ini.
-                    KEMBALIKAN DALAM FORMAT JSON YANG VALID SESUAI SKEMA BERIKUT:
-                    {
-                        "date": "tanggal transfer dalam format YYYY-MM-DD",
-                        "sourceBank": "nama bank pengirim (contoh: BRI, BCA, Mandiri, dll)",
-                        "sourceName": "nama pemilik rekening pengirim",
-                        "destBank": "nama bank tujuan penerima",
-                        "destAccount": "nomor rekening tujuan (HANYA ANGKA tanpa spasi/simbol)",
-                        "destName": "nama penerima",
-                        "refNumber": "nomor referensi atau nomor struk transaksi",
-                        "amount": "nominal transfer pokok (HANYA ANGKA murni, tanpa titik/koma/Rp)",
-                        "adminFee": "biaya admin (HANYA ANGKA murni, jika gratis atau tidak ada isi 0)"
-                    }
-                    Jika ada informasi yang tidak tercantum di gambar, isi dengan string kosong "".
-                    PENTING: Jangan tambahkan teks markdown seperti \`\`\`json, kembalikan objek JSON murni saja.
+                    Ekstrak informasi struk transfer bank/mobile banking (khususnya desain seperti BRImo, BCA, Mandiri). 
+                    FOKUS UTAMA: Cari kata-kata "Sumber Dana", "Dari", "Tujuan", "Ke" untuk menentukan pihak pengirim dan penerima.
+                    Terkadang nomor rekening terpisah spasi (contoh: 1234 5678 90), tolong satukan tanpa spasi.
+                    Ubah tulisan bulan menjadi angka untuk format YYYY-MM-DD.
+                    PENTING: Jangan ambil 'Total Transaksi' sebagai nominal jika ada rincian 'Nominal' dan 'Biaya Admin'.
+                    KEMBALIKAN HANYA JSON INI:
+                    { "date": "YYYY-MM-DD", "sourceBank": "", "sourceName": "", "destBank": "", "destAccount": "hanya angka", "destName": "", "refNumber": "", "amount": "hanya angka", "adminFee": "hanya angka" }
                 `;
 
-                // 3. Susun Payload untuk Gemini API
                 const payload = {
-                    contents: [{
-                        role: "user",
-                        parts: [
-                            { text: promptText },
-                            {
-                                inlineData: {
-                                    mimeType: mimeType,
-                                    data: base64Data
-                                }
-                            }
-                        ]
-                    }],
-                    generationConfig: {
-                        responseMimeType: "application/json", // Memaksa Gemini mereturn JSON
-                    }
+                    contents: [{ role: "user", parts: [{ text: promptText }, { inlineData: { mimeType, data: base64Data } }] }],
+                    generationConfig: { responseMimeType: "application/json" }
                 };
 
-                // 4. Daftar Model Gemini dengan Urutan Prioritas (Pro -> Flash -> Flash Lite)
-                const models = [
-                    "gemini-3.1-pro",
-                    "gemini-3.6-flash",
-                    "gemini-3.5-flash-lite"
-                ];
-
-                const apiKey = "AQ.Ab8RN6JnwvCKgY3Q5fDe-J0Al330mUbm5BFz5Rkggr3Gm6Hs7g"; // DEVELOPER NOTE: Isi ulang API Key Anda di sini
+                const models = ["gemini-3.1-pro", "gemini-3.6-flash", "gemini-3.5-flash-lite"];
                 let result = null;
-                let fetchSuccess = false;
 
-                // 5. Looping Fallback (Coba satu per satu dari yang paling Pro)
-                for (const modelName of models) {
-                    console.log(`[AI] Mencoba mengekstrak menggunakan model: ${modelName}...`);
-                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
-
+                for (const model of models) {
                     try {
-                        const response = await fetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${appSettings.apiKey}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                         });
-
-                        if (response.ok) {
-                            result = await response.json();
-                            fetchSuccess = true;
-                            console.log(`[AI] Sukses! Data berhasil dibaca menggunakan: ${modelName}`);
-                            break; // Keluar dari loop pencarian jika sudah berhasil
-                        } else {
-                            // Jika error (misal 429 limit tercapai, atau 500 server sibuk)
-                            console.warn(`[AI] Model ${modelName} gagal (Status: ${response.status}). Mencoba model cadangan selanjutnya...`);
-                        }
-                    } catch (e) {
-                        // Jika terjadi error jaringan terputus
-                        console.warn(`[AI] Network error saat mencoba ${modelName}:`, e.message);
-                    }
+                        if (res.ok) { result = await res.json(); break; }
+                    } catch (e) { console.warn(`Fallback ${model} failed`); }
                 }
 
-                // Jika semua model dalam daftar gagal
-                if (!fetchSuccess || !result) {
-                    throw new Error("Semua tingkat model Gemini (Pro, Flash, Flash Lite) sedang limit atau tidak dapat diakses saat ini.");
-                }
+                if (!result) throw new Error("Gagal terhubung ke AI Google.");
                 
-                // 6. Parse Hasil JSON dari Gemini
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
-                    // Gemini terkadang membungkus JSON dengan markdown ```json ... ```, kita harus membersihkannya
-                    let jsonString = result.candidates[0].content.parts[0].text;
-                    jsonString = jsonString.replace(/```json/gi, '').replace(/```/g, '').trim();
-                    
-                    try {
-                        const parsedData = JSON.parse(jsonString);
-                        console.log("Hasil Ekstraksi Gemini:", parsedData);
-                        hideLoading();
-
-                        // 7. Masukkan Hasil Ekstraksi Gemini ke dalam Form
-                        if(parsedData.date) dateInput.value = parsedData.date;
-                        if(parsedData.sourceBank) sourceBankInput.value = parsedData.sourceBank;
-                        if(parsedData.sourceName) sourceNameInput.value = parsedData.sourceName;
-                        if(parsedData.destBank) destBankInput.value = parsedData.destBank;
-                        if(parsedData.destAccount) destAccountInput.value = parsedData.destAccount;
-                        if(parsedData.destName) destNameInput.value = parsedData.destName;
-                        if(parsedData.refNumber) refNumberInput.value = parsedData.refNumber;
-                        if(parsedData.amount) amountInput.value = parsedData.amount;
-                        if(parsedData.adminFee) adminFeeInput.value = parsedData.adminFee;
-
-                        showModal('success', 'Berhasil Diekstrak', 'Data berhasil dibaca oleh AI. Silakan cek kembali dan isi keterangan/keperluan transfer.');
-                    } catch (parseError) {
-                        console.error("Gagal parse JSON:", parseError, "String dari Gemini:", jsonString);
-                        hideLoading();
-                        showModal("error", "Format AI Salah", "AI mengembalikan format yang tidak dikenali.");
+                let jsonStr = result.candidates[0].content.parts[0].text.replace(/```json/gi, '').replace(/```/g, '').trim();
+                const parsedData = JSON.parse(jsonStr);
+                
+                Object.keys(parsedData).forEach(key => {
+                    if (parsedData[key] && formElements[key]) {
+                        formElements[key].value = parsedData[key];
                     }
-                }
-            } catch (e) {
-                console.error("Keseluruhan Error AI:", e);
+                });
+
                 hideLoading();
-                showModal("error", "Koneksi AI Gagal", e.message || "Gagal memproses gambar menggunakan AI. Silakan isi manual.");
+                showModal('success', 'Berhasil', 'Data dibaca otomatis. Mohon periksa kembali dan isi keterangan/Pilih Proyek.');
+            } catch (e) {
+                hideLoading();
+                showModal("error", "AI Error", e.message || "Gagal membaca struk. Silakan isi manual.");
             }
-        } // Penutup fungsi extractDataFromReceipt yang sebelumnya hilang
+        }
 
-        // =========================================================================
-        // FUNGSI SIMPAN DATA KE GOOGLE APPS SCRIPT (CLOUD)
-        // =========================================================================
-        submitBtn.addEventListener('click', async (e) => {
+        document.getElementById('submitBtn').addEventListener('click', async (e) => {
             e.preventDefault();
-
-            if (!currentBase64Image) {
-                showModal('error', 'Input Tidak Lengkap', 'Silakan upload foto bukti transfer terlebih dahulu.');
-                return;
-            }
-            if (!dateInput.value || !amountInput.value || !descInput.value) {
-                showModal('error', 'Input Tidak Lengkap', 'Mohon lengkapi Tanggal, Nominal (Rp), dan Keterangan.');
-                return;
-            }
             
-            if(APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycby-QuJfwSiq-IuT5SPdbQ0jNyRuTek618pb9XT8bBgk5b5yhqfGEi0n0vzZOLUs8bYc/exec" || APP_SCRIPT_URL.trim() === "") {
-                showModal('error', 'Konfigurasi Diperlukan', 'Developer Note: Harap ganti variabel APP_SCRIPT_URL pada source code HTML dengan Web App URL Google Apps Script Anda.');
+            if (!appSettings.scriptUrl) {
+                showModal('error', 'URL Script Kosong', 'Silakan masukkan URL Google Apps Script di menu Pengaturan.');
+                return;
+            }
+            if (!currentBase64Image || !formElements.amount.value || !formElements.project.value) {
+                showModal('error', 'Belum Lengkap', 'Pilih Proyek, Nominal, dan Foto Bukti wajib diisi.');
                 return;
             }
 
-            // Siapkan payload dengan field lengkap
-            const fileName = `Bukti_${new Date().getTime()}.jpg`;
             const payload = {
-                date: dateInput.value,
-                sourceBank: sourceBankInput.value,
-                sourceName: sourceNameInput.value,
-                destBank: destBankInput.value,
-                destAccount: destAccountInput.value,
-                destName: destNameInput.value,
-                refNumber: refNumberInput.value,
-                amount: amountInput.value,
-                adminFee: adminFeeInput.value,
-                description: descInput.value,
+                date: formElements.date.value,
+                project: formElements.project.value,
+                sourceBank: formElements.sourceBank.value,
+                sourceName: formElements.sourceName.value,
+                destBank: formElements.destBank.value,
+                destAccount: formElements.destAccount.value,
+                destName: formElements.destName.value,
+                refNumber: formElements.refNumber.value,
+                amount: formElements.amount.value,
+                adminFee: formElements.adminFee.value,
+                description: formElements.desc.value,
                 image: currentBase64Image,
-                filename: fileName
+                filename: `Bukti_${formElements.project.value.replace(/\s+/g,'_')}_${new Date().getTime()}.jpg`
             };
 
-            showLoading("Mengirim Data & Gambar ke Cloud...");
-            submitBtn.disabled = true;
-
+            showLoading("Menyimpan ke Cloud...");
             try {
-                // Eksekusi POST Request ke Google Apps Script
-                const response = await fetch(APP_SCRIPT_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify(payload)
+                const res = await fetch(appSettings.scriptUrl, {
+                    method: 'POST', body: JSON.stringify(payload)
                 });
-                
-                const result = await response.json();
+                const resData = await res.json();
                 hideLoading();
-                submitBtn.disabled = false;
-
-                if (result.status === 'success') {
-                    showModal('success', 'Berhasil Tersimpan', 'Data keuangan dan bukti foto sukses disimpan di Spreadsheet & Drive.');
-                    
-                    // Reset Form kembali ke keadaan semula
-                    resetImageInput();
-                    document.getElementById('dataForm').reset();
-                    dateInput.value = new Date().toISOString().split('T')[0];
-                    adminFeeInput.value = "0";
+                
+                if (resData.status === 'success') {
+                    showModal('success', 'Sukses', 'Data tersimpan ke Spreadsheet!');
+                    resetFormUI();
+                    fetchDashboardData(); // Refresh bg data
                 } else {
-                    showModal('error', 'Gagal Tersimpan', 'Error Server: ' + result.message);
+                    showModal('error', 'Gagal', 'Server: ' + resData.message);
                 }
-                
-            } catch (error) {
+            } catch (err) {
                 hideLoading();
-                submitBtn.disabled = false;
-                console.error("Upload Error:", error);
-                showModal('error', 'Gagal Tersimpan', 'Tidak dapat terhubung ke server Google. Pastikan internet aktif dan URL Apps Script benar.');
+                showModal('error', 'Koneksi Gagal', 'Pastikan internet Anda stabil.');
             }
         });
+
+        document.getElementById('refreshDashboardBtn').addEventListener('click', fetchDashboardData);
+
+        async function fetchDashboardData() {
+            if (!appSettings.scriptUrl) return;
+            
+            showLoading("Memuat Data Keuangan...");
+            try {
+                // Menambahkan redirect 'follow' karena GAS API sering melakukan redirect 302
+                const res = await fetch(appSettings.scriptUrl + "?action=getData", {
+                    method: 'GET',
+                    redirect: 'follow' 
+                });
+                const resData = await res.json();
+                hideLoading();
+
+                if(resData.status === 'success') {
+                    renderDashboard(resData.data);
+                } else {
+                    // Jika script mereturn error (misal ID salah), ini akan muncul
+                    showModal('error', 'Gagal Sinkronisasi', 'Pesan Server: ' + resData.message);
+                }
+            } catch (err) {
+                hideLoading();
+                showModal('error', 'Gagal Memuat', 'Pastikan URL Script benar dan internet stabil. ' + err.message);
+                console.error(err);
+            }
+        }
+
+        function renderDashboard(dataArray) {
+            const listContainer = document.getElementById('dashboardList');
+            let totalAmount = 0;
+            
+            if (dataArray.length === 0) {
+                listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 text-sm"><i class="fa-solid fa-box-open text-3xl mb-2"></i><br>Belum ada data.</div>`;
+                document.getElementById('dashTotalCount').innerText = "0";
+                document.getElementById('dashTotalAmount').innerText = "Rp 0";
+                return;
+            }
+
+            listContainer.innerHTML = ''; // Bersihkan list
+            
+            dataArray.forEach(item => {
+                // Menjumlahkan nominal. Hapus huruf non-angka (seperti Rp atau titik) sebelum dijumlah.
+                const rawVal = item['Nominal (Rp)'] ? item['Nominal (Rp)'].toString().replace(/[^0-9]/g, '') : "0";
+                totalAmount += parseInt(rawVal) || 0;
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start";
+                card.innerHTML = `
+                    <div class="overflow-hidden pr-2">
+                        <span class="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 text-[10px] font-bold rounded mb-1">${item['Nama Proyek'] || '-'}</span>
+                        <h4 class="font-bold text-gray-800 text-sm truncate">${item['Nama Tujuan'] || 'Tanpa Nama'}</h4>
+                        <p class="text-xs text-gray-500 mb-1">${item['Tanggal Transfer'] || '-'}</p>
+                        <p class="text-xs text-gray-600 truncate">${item['Keterangan'] || '-'}</p>
+                    </div>
+                    <div class="text-right shrink-0 flex flex-col items-end">
+                        <span class="font-bold text-red-600 text-sm">${formatRupiah(rawVal || 0)}</span>
+                        ${item['Link Bukti Foto'] ? `<a href="${item['Link Bukti Foto']}" target="_blank" class="mt-2 text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded transition-colors"><i class="fa-solid fa-link"></i> Bukti</a>` : ''}
+                    </div>
+                `;
+                listContainer.appendChild(card);
+            });
+
+            document.getElementById('dashTotalCount').innerText = dataArray.length;
+            document.getElementById('dashTotalAmount').innerText = formatRupiah(totalAmount);
+        }
+
+        // Jalankan saat load
+        initApp();
     </script>
 </body>
 </html>
