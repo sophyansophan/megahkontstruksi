@@ -107,25 +107,60 @@
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <i class="fa-regular fa-calendar text-gray-400"></i>
                         </div>
-                        <input type="date" id="dateInput" required class="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm transition-shadow">
+                        <input type="date" id="dateInput" required class="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm text-sm">
                     </div>
                 </div>
 
-                <!-- Nominal -->
+                <!-- Info Asal -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Bank Asal</label>
+                        <input type="text" id="sourceBankInput" placeholder="Contoh: BCA" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Asal</label>
+                        <input type="text" id="sourceNameInput" placeholder="Nama Pengirim" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                    </div>
+                </div>
+
+                <!-- Info Tujuan -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Bank Tujuan</label>
+                        <input type="text" id="destBankInput" placeholder="Contoh: BRI" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">No. Rek Tujuan</label>
+                        <input type="number" id="destAccountInput" placeholder="No Rekening" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                    </div>
+                </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nominal (Rp)</label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-semibold">
-                            Rp
-                        </div>
-                        <input type="number" id="amountInput" required placeholder="0" class="w-full pl-12 pr-3 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm transition-shadow text-lg font-bold text-blue-900">
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nama Tujuan</label>
+                    <input type="text" id="destNameInput" placeholder="Nama Penerima" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
+                </div>
+
+                <!-- No Referensi -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Nomor Referensi</label>
+                    <input type="text" id="refNumberInput" placeholder="No Ref / Transaksi" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm font-mono">
+                </div>
+
+                <!-- Nominal & Admin -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-blue-800 mb-1">Nominal (Rp) *</label>
+                        <input type="number" id="amountInput" required placeholder="0" class="w-full p-2.5 rounded-lg border-2 border-blue-400 focus:ring-2 focus:ring-blue-500 bg-blue-50 shadow-sm font-bold text-blue-900">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Biaya Admin (Rp)</label>
+                        <input type="number" id="adminFeeInput" value="0" placeholder="0" class="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm">
                     </div>
                 </div>
 
                 <!-- Keterangan -->
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Keterangan / Keperluan</label>
-                    <textarea id="descInput" required rows="3" placeholder="Contoh: Pembayaran material semen proyek A..." class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm transition-shadow"></textarea>
+                    <label class="block text-xs font-semibold text-gray-700 mb-1">Keterangan / Keperluan *</label>
+                    <textarea id="descInput" required rows="2" placeholder="Contoh: Material proyek A..." class="w-full p-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm"></textarea>
                 </div>
                 
             </form>
@@ -173,9 +208,15 @@
         // Registrasi Service Worker PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js')
-                    .then(reg => console.log('Service Worker Registered!', reg))
-                    .catch(err => console.error('Service Worker Registration Failed!', err));
+                // Mencegah error di environment Preview (seperti blob: atau file://)
+                // PWA hanya aktif jika dihosting di HTTP/HTTPS sungguhan (misal: GitHub Pages)
+                if (window.location.protocol === 'http:' || window.location.protocol === 'https:') {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(reg => console.log('Service Worker Registered!', reg))
+                        .catch(err => console.warn('Service Worker Registration Skipped/Failed (Wajar jika di mode preview):', err.message));
+                } else {
+                    console.log('Mode Preview Aktif: Service Worker tidak diregistrasi untuk menghindari error protokol.');
+                }
             });
         }
 
@@ -209,8 +250,16 @@
         const imagePreview = document.getElementById('imagePreview');
         const removeImageBtn = document.getElementById('removeImageBtn');
         
+        // Form Inputs
         const dateInput = document.getElementById('dateInput');
+        const sourceBankInput = document.getElementById('sourceBankInput');
+        const sourceNameInput = document.getElementById('sourceNameInput');
+        const destBankInput = document.getElementById('destBankInput');
+        const destAccountInput = document.getElementById('destAccountInput');
+        const destNameInput = document.getElementById('destNameInput');
+        const refNumberInput = document.getElementById('refNumberInput');
         const amountInput = document.getElementById('amountInput');
+        const adminFeeInput = document.getElementById('adminFeeInput');
         const descInput = document.getElementById('descInput');
         
         const submitBtn = document.getElementById('submitBtn');
@@ -311,89 +360,173 @@
 
         // Menjalankan OCR (Optical Character Recognition)
         async function extractDataFromReceipt(base64Image) {
-            showLoading("Memindai Nominal Bukti Transfer (AI)...");
+            showLoading("Memindai Data Bukti Transfer (AI)...");
             
             try {
-                // Tesseract memproses gambar dan mengekstrak semua teks (menggunakan Bahasa Indonesia & Inggris)
-                const result = await Tesseract.recognize(
-                    base64Image,
-                    'ind+eng',
-                    { logger: m => {
-                        // Jika Anda ingin melihat progress tesseract, bisa log `m` ke console
-                    }}
-                );
-                
+                const result = await Tesseract.recognize(base64Image, 'ind+eng');
                 const text = result.data.text;
-                console.log("Teks yang terdeteksi OCR:", text);
+                console.log("Teks yang terdeteksi OCR:\n", text);
                 
-                // Fungsi pencarian Regex untuk menemukan Nominal (Rp)
-                let amountStr = findMaxAmount(text);
-                
-                // Menemukan tanggal (Opsional, karena format bank sangat bervariasi)
-                // Sementara date tetap default ke hari ini
+                // Panggil fungsi pintar parser data
+                const parsedData = parseReceiptData(text);
+                console.log("Hasil Parsing AI:", parsedData);
                 
                 hideLoading();
 
-                if (amountStr) {
-                    amountInput.value = amountStr;
-                    showModal('info', 'Data Ditemukan', `Nominal otomatis terisi: Rp ${parseInt(amountStr).toLocaleString('id-ID')}. Silakan cek ulang dan tambahkan keterangan.`);
-                    // Arahkan fokus pengguna ke Keterangan
-                    descInput.focus();
-                } else {
-                    showModal('error', 'Nominal Tidak Ditemukan', 'AI kami kesulitan membaca angka pada foto tersebut. Silakan ketik nominal secara manual.');
-                    amountInput.focus();
-                }
+                // Isi form dengan data hasil tebakan
+                if(parsedData.date) dateInput.value = parsedData.date;
+                if(parsedData.sourceBank) sourceBankInput.value = parsedData.sourceBank;
+                if(parsedData.sourceName) sourceNameInput.value = parsedData.sourceName;
+                if(parsedData.destBank) destBankInput.value = parsedData.destBank;
+                if(parsedData.destAccount) destAccountInput.value = parsedData.destAccount;
+                if(parsedData.destName) destNameInput.value = parsedData.destName;
+                if(parsedData.refNumber) refNumberInput.value = parsedData.refNumber;
+                if(parsedData.amount) amountInput.value = parsedData.amount;
+                if(parsedData.adminFee) adminFeeInput.value = parsedData.adminFee;
+
+                showModal('info', 'Selesai Memindai', 'Data berhasil diekstrak. Mohon periksa kembali kolom-kolom form dan pastikan sudah benar sebelum disimpan.');
+                descInput.focus();
 
             } catch (error) {
                 hideLoading();
                 console.error("OCR Error: ", error);
-                showModal('error', 'Gagal Memindai', 'Terjadi kesalahan sistem saat mencoba membaca gambar. Silakan isi form manual.');
+                showModal('error', 'Gagal Memindai', 'Terjadi kesalahan sistem. Silakan isi form manual.');
             }
         }
 
-        // Logika Regex cerdas untuk menemukan angka terbesar (kemungkinan besar nominal transfer)
-        function findMaxAmount(text) {
-            console.log("Teks mentah dari OCR:\n", text);
-            let candidates = [];
+        // Fungsi Cerdas Parser (Logika Heuristik & Regex)
+        function parseReceiptData(text) {
+            let data = { date: '', sourceBank: '', sourceName: '', destBank: '', destAccount: '', destName: '', refNumber: '', amount: '', adminFee: '0' };
             
-            // 1. Cari angka yang diformat dengan titik/koma sebagai pemisah ribuan (Misal: 1.500.000 atau 1,500,000)
-            // Ini sangat ampuh membedakan nominal uang dari nomor rekening atau ID referensi yang tanpa pemisah.
-            const formattedMoneyRegex = /\b\d{1,3}(?:[\.\,]\d{3})+\b/g;
-            let match;
-            
-            while ((match = formattedMoneyRegex.exec(text)) !== null) {
-                // Hapus semua titik dan koma dari hasil temuan (contoh: "1.500.000" -> "1500000")
-                let rawStr = match[0].replace(/[\.\,]/g, '');
-                let num = parseInt(rawStr, 10);
-                
-                // Filter: Hanya terima nominal yang rasional untuk proyek (di atas Rp 10.000)
-                if (num >= 10000) {
-                    candidates.push(num);
+            // Bersihkan teks ekstra dan jadikan array per baris
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const textUpper = text.toUpperCase();
+
+            // 1. TANGGAL (Support teks seperti "20 Juli 2026")
+            const bulanMap = {
+                'JANUARI': '01', 'JAN': '01', 'FEBRUARI': '02', 'FEB': '02',
+                'MARET': '03', 'MAR': '03', 'APRIL': '04', 'APR': '04',
+                'MEI': '05', 'JUNI': '06', 'JUN': '06', 'JULI': '07', 'JUL': '07',
+                'AGUSTUS': '08', 'AGU': '08', 'SEPTEMBER': '09', 'SEP': '09',
+                'OKTOBER': '10', 'OKT': '10', 'NOVEMBER': '11', 'NOV': '11',
+                'DESEMBER': '12', 'DES': '12'
+            };
+            const dateTextRegex = /(\d{1,2})\s+([A-Z]+)\s+(\d{4})/i;
+            const dateMatchText = text.match(dateTextRegex);
+            if (dateMatchText) {
+                let day = dateMatchText[1].padStart(2, '0');
+                let monthStr = dateMatchText[2].toUpperCase();
+                let year = dateMatchText[3];
+                if (bulanMap[monthStr]) {
+                    data.date = `${year}-${bulanMap[monthStr]}-${day}`; // Format YYYY-MM-DD
                 }
             }
+            // Fallback: Jika tanggal pakai angka biasa (DD/MM/YYYY)
+            if (!data.date) {
+                const dateNumMatch = text.match(/\b(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})\b/);
+                if (dateNumMatch) data.date = `${dateNumMatch[3]}-${dateNumMatch[2]}-${dateNumMatch[1]}`;
+            }
+
+            // 2. NOMOR REFERENSI (Support format "No. Ref 1800...")
+            const refRegex = /(?:REF|REFERENSI|NO\.?\s*REF)[\.\:\-]?\s*([A-Z0-9]{8,20})/i;
+            const refMatch = text.match(refRegex);
+            if (refMatch) data.refNumber = refMatch[1];
+
+            // 3. UANG (Mencari berdasarkan baris yang mengandung kata kunci)
+            let foundNominal = false;
+            let foundAdmin = false;
             
-            // 2. Fallback: Jika tidak ada format ribuan (misal OCR gagal baca titik karena gambar blur), 
-            // cari angka berapapun yang lokasinya berdekatan dengan kata 'Rp' atau 'IDR'
-            if (candidates.length === 0) {
-                const fallbackRegex = /(?:RP|IDR)\s*[\.\:\-]?\s*(\d{4,12})\b/ig;
-                while ((match = fallbackRegex.exec(text)) !== null) {
-                    let num = parseInt(match[1], 10);
-                    if (num >= 10000) {
-                        candidates.push(num);
+            // Fungsi penolong pembersih angka
+            let getAmount = (str) => {
+                let m = str.match(/(?:Rp|IDR)?\s*([\d]{1,3}(?:[\.\,]\d{3})+)/i); // Tangkap angka berformat titik
+                if (m) return m[1].replace(/[\.\,]/g, ''); // Hapus titik ribuan
+                return null;
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                let lineUp = lines[i].toUpperCase();
+                
+                // Cari kata "Nominal" di baris itu
+                if (lineUp.includes('NOMINAL') && !lineUp.includes('TOTAL')) {
+                    let amt = getAmount(lineUp);
+                    if (!amt && i+1 < lines.length) amt = getAmount(lines[i+1]); // Cek baris bawahnya
+                    if (amt) { data.amount = amt; foundNominal = true; }
+                }
+                
+                // Cari kata "Biaya Admin"
+                if (lineUp.includes('BIAYA ADMIN') || lineUp.includes('ADMIN')) {
+                    let amt = getAmount(lineUp);
+                    if (!amt && i+1 < lines.length) amt = getAmount(lines[i+1]);
+                    if (amt) { data.adminFee = amt; foundAdmin = true; }
+                }
+            }
+
+            // Fallback Nominal: Jika gagal deteksi label Nominal, baru pakai tebakan angka terbesar
+            if (!foundNominal) {
+                const moneyRegex = /\b\d{1,3}(?:[\.\,]\d{3})+\b/g;
+                let amounts = [];
+                let m;
+                while ((m = moneyRegex.exec(text)) !== null) {
+                    amounts.push(parseInt(m[0].replace(/[\.\,]/g, ''), 10));
+                }
+                if (amounts.length > 0) {
+                    amounts = [...new Set(amounts)]; // Hapus duplikat
+                    amounts.sort((a, b) => b - a); // Urutkan terbesar
+                    
+                    // Jika ada total + nominal, biasanya selisihnya adalah admin (2500, 6500)
+                    if (amounts.length >= 2 && [2500, 6500, 1000, 0].includes(amounts[0] - amounts[1])) {
+                        data.amount = amounts[1].toString(); // Ambil yg lebih kecil (Nominal asli)
+                    } else {
+                        data.amount = amounts[0].toString(); // Ambil mutlak paling besar
                     }
                 }
             }
 
-            console.log("Kandidat nominal yang ditemukan:", candidates);
+            // 4. MENCARI INFO BANK, REKENING, & NAMA (Membaca Zona "Sumber" dan "Tujuan")
+            let bankList = ["BCA", "BRI", "BNI", "MANDIRI", "BSI", "CIMB", "PERMATA", "JAGO", "SEABANK", "OVO", "DANA", "GOPAY", "SHOPEEPAY", "LINKAJA", "BJB", "DKI"];
+            
+            let parseSection = (startIndex, isSource) => {
+                 // Baca maksimal 6 baris ke bawah setelah menemukan kata kunci (Tujuan / Sumber)
+                 let limit = Math.min(startIndex + 6, lines.length);
+                 for(let i = startIndex + 1; i < limit; i++) {
+                     let line = lines[i].toUpperCase();
+                     
+                     // Tangkap Nama Bank
+                     if ((isSource && !data.sourceBank) || (!isSource && !data.destBank)) {
+                         let b = bankList.find(bank => line.includes(bank));
+                         if (b) {
+                             if (isSource) data.sourceBank = b;
+                             else data.destBank = b;
+                         }
+                     }
 
-            // Jika ada angka yang ditemukan, ambil yang paling besar 
-            // (Mengatasi kasus dimana struk menampilkan biaya admin Rp 2.500, nominal utama selalu lebih besar)
-            if (candidates.length > 0) {
-                let maxAmount = Math.max(...candidates);
-                return maxAmount.toString();
+                     // Tangkap Nomor Rekening (Abaikan/hapus spasi jika angkanya terputus-putus)
+                     let cleanNum = line.replace(/\s+/g, '');
+                     if (!isSource && cleanNum.match(/^\d{9,16}$/)) { 
+                         // Nomor rekening tujuan biasanya 9-16 digit tanpa bintang
+                         data.destAccount = cleanNum;
+                     }
+
+                     // Tangkap Nama Orang (Bukan angka, bukan label bank, dan hurufnya agak panjang)
+                     if (!line.match(/\d/) && !bankList.some(b => line.includes(b)) && !line.includes("BANK") && line.length > 3) {
+                         if (isSource && !data.sourceName) data.sourceName = lines[i];
+                         else if (!isSource && !data.destName) data.destName = lines[i];
+                     }
+                 }
+            };
+
+            for (let i = 0; i < lines.length; i++) {
+                let l = lines[i].toUpperCase();
+                // Jika ketemu label awal blok
+                if (l.includes("SUMBER DANA") || l.includes("PENGIRIM") || l.includes("DARI")) {
+                    parseSection(i, true);
+                }
+                if (l.includes("TUJUAN") || l.includes("PENERIMA") || l.includes("KE PADA") || l.includes("KE REKENING")) {
+                    parseSection(i, false);
+                }
             }
 
-            return null;
+            return data;
         }
 
         // Menangani pengiriman form dan foto ke backend
@@ -413,11 +546,18 @@
                 return;
             }
 
-            // Siapkan payload
+            // Siapkan payload dengan field baru
             const fileName = `Bukti_${new Date().getTime()}.jpg`;
             const payload = {
                 date: dateInput.value,
+                sourceBank: sourceBankInput.value,
+                sourceName: sourceNameInput.value,
+                destBank: destBankInput.value,
+                destAccount: destAccountInput.value,
+                destName: destNameInput.value,
+                refNumber: refNumberInput.value,
                 amount: amountInput.value,
+                adminFee: adminFeeInput.value,
                 description: descInput.value,
                 image: currentBase64Image,
                 filename: fileName
@@ -444,9 +584,9 @@
                     
                     // Reset Form
                     resetImageInput();
-                    amountInput.value = '';
-                    descInput.value = '';
+                    document.getElementById('dataForm').reset();
                     dateInput.value = new Date().toISOString().split('T')[0];
+                    adminFeeInput.value = "0";
                 } else {
                     showModal('error', 'Gagal Tersimpan', 'Error Server: ' + result.message);
                 }
