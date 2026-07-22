@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Keuangan Kontraktor</title>
+    
+    <!-- PWA Manifest & Theme Color -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+    <link rel="apple-touch-icon" href="icon.png">
+    
+    <!-- Tailwind CSS untuk Styling Responsif ala Aplikasi Mobile -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome untuk Ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tesseract.js untuk OCR (Membaca Teks dari Gambar) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9; /* Slate 100 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Membatasi lebar aplikasi di desktop agar terlihat seperti aplikasi mobile */
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #ffffff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        /* Animasi loading spinner */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 3px solid #1e3a8a;
+            width: 24px;
+            height: 24px;
+            -webkit-animation: spin 1s linear infinite; /* Safari */
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Styling kustom file input agar tak terlihat bawaan browser */
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- App Bar / Header -->
+        <header class="bg-blue-900 text-white p-4 sticky top-0 z-20 flex justify-between items-center shadow-md">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-wallet text-xl"></i>
+                <h1 class="text-lg font-bold tracking-wide">Data Keuangan</h1>
+            </div>
+            <button id="installBtn" class="hidden text-xs bg-white text-blue-900 px-3 py-1.5 rounded-full font-bold shadow-sm active:scale-95 transition-transform">
+                <i class="fa-solid fa-download mr-1"></i> Install
+            </button>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-5 pb-24">
+            
+            <p class="text-gray-500 text-sm mb-4">Upload bukti transfer untuk mengekstrak data nominal secara otomatis.</p>
+
+            <!-- Area Upload Gambar -->
+            <label for="imageInput" class="block w-full border-2 border-dashed border-blue-300 bg-blue-50 hover:bg-blue-100 transition-colors rounded-xl p-8 text-center cursor-pointer mb-6" id="uploadArea">
+                <div id="uploadPlaceholder">
+                    <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-500 mb-3"></i>
+                    <h3 class="text-blue-800 font-semibold mb-1">Tap untuk Upload Bukti</h3>
+                    <p class="text-xs text-blue-400">JPG, PNG atau Kamera</p>
+                </div>
+                
+                <!-- Preview Gambar (Hidden By Default) -->
+                <div id="imagePreviewContainer" class="hidden relative">
+                    <img id="imagePreview" class="w-full max-h-64 object-contain rounded-lg shadow-sm" src="" alt="Preview Bukti Transfer">
+                    <div class="absolute -top-3 -right-3 bg-red-500 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white hover:bg-red-600 active:scale-90 transition-transform" id="removeImageBtn" title="Hapus Gambar">
+                        <i class="fa-solid fa-times"></i>
+                    </div>
+                </div>
+            </label>
+            <input type="file" id="imageInput" accept="image/*" capture="environment">
+
+            <!-- Form Data Keuangan -->
+            <form id="dataForm" class="space-y-4">
+                
+                <!-- Tanggal -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Tanggal Transfer</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <i class="fa-regular fa-calendar text-gray-400"></i>
+                        </div>
+                        <input type="date" id="dateInput" required class="w-full pl-10 pr-3 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm transition-shadow">
+                    </div>
+                </div>
+
+                <!-- Nominal -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Nominal (Rp)</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500 font-semibold">
+                            Rp
+                        </div>
+                        <input type="number" id="amountInput" required placeholder="0" class="w-full pl-12 pr-3 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm transition-shadow text-lg font-bold text-blue-900">
+                    </div>
+                </div>
+
+                <!-- Keterangan -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Keterangan / Keperluan</label>
+                    <textarea id="descInput" required rows="3" placeholder="Contoh: Pembayaran material semen proyek A..." class="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-800 shadow-sm transition-shadow"></textarea>
+                </div>
+                
+            </form>
+        </main>
+
+        <!-- Sticky Bottom Button -->
+        <div class="absolute bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 z-10">
+            <button type="button" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg active:scale-95 transition-all flex justify-center items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                <i class="fa-solid fa-paper-plane"></i> Simpan Data ke Cloud
+            </button>
+        </div>
+
+        <!-- Custom Modal (Menghindari penggunaan alert bawaan browser) -->
+        <div id="customModal" class="fixed inset-0 bg-black/60 z-50 hidden flex-col items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform transition-transform scale-95 opacity-0" id="modalContent">
+                
+                <div id="modalIcon" class="mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-3xl">
+                    <!-- Ikon dimuat oleh JavaScript -->
+                </div>
+                
+                <h3 id="modalTitle" class="text-xl font-bold text-center text-gray-800 mb-2">Judul</h3>
+                <p id="modalMessage" class="text-center text-gray-600 mb-6 text-sm">Pesan Modal</p>
+                
+                <button id="modalCloseBtn" class="w-full bg-gray-100 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-200 active:scale-95 transition-transform">
+                    Tutup
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading Overlay Kustom -->
+        <div id="loadingOverlay" class="fixed inset-0 bg-black/50 z-[60] hidden flex-col items-center justify-center backdrop-blur-sm">
+            <div class="bg-white p-5 rounded-2xl flex items-center gap-4 shadow-xl">
+                <div class="loader"></div>
+                <span id="loadingText" class="font-semibold text-blue-900">Memproses...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // KONFIGURASI PENTING (Ganti URL di bawah dengan Web App URL Apps Script Anda)
+        // =========================================================================
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-QuJfwSiq-IuT5SPdbQ0jNyRuTek618pb9XT8bBgk5b5yhqfGEi0n0vzZOLUs8bYc/exec"; 
+
+        // Registrasi Service Worker PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker Registered!', reg))
+                    .catch(err => console.error('Service Worker Registration Failed!', err));
+            });
+        }
+
+        // Penanganan Install PWA Prompt
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.remove('hidden'); // Tampilkan tombol instalasi
+        });
+        
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt !== null) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    deferredPrompt = null;
+                    installBtn.classList.add('hidden');
+                }
+            }
+        });
+
+        // Set Default Date (Hari ini)
+        document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+
+        // DOM Elements
+        const imageInput = document.getElementById('imageInput');
+        const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+        const imagePreviewContainer = document.getElementById('imagePreviewContainer');
+        const imagePreview = document.getElementById('imagePreview');
+        const removeImageBtn = document.getElementById('removeImageBtn');
+        
+        const dateInput = document.getElementById('dateInput');
+        const amountInput = document.getElementById('amountInput');
+        const descInput = document.getElementById('descInput');
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const uploadArea = document.getElementById('uploadArea');
+
+        let currentBase64Image = null; // Menyimpan data gambar saat ini
+
+        // Fungsi kontrol UI
+        function showLoading(text) {
+            document.getElementById('loadingText').innerText = text;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            document.getElementById('loadingOverlay').classList.add('flex');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.remove('flex');
+        }
+
+        function showModal(type, title, message) {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            const iconDiv = document.getElementById('modalIcon');
+            
+            // Konfigurasi tipe ikon dan warna
+            if(type === 'success') {
+                iconDiv.className = 'mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl bg-green-100 text-green-500';
+                iconDiv.innerHTML = '<i class="fa-solid fa-check"></i>';
+            } else if (type === 'error') {
+                iconDiv.className = 'mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl bg-red-100 text-red-500';
+                iconDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else {
+                iconDiv.className = 'mx-auto w-16 h-16 mb-4 rounded-full flex items-center justify-center text-4xl bg-blue-100 text-blue-500';
+                iconDiv.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            }
+
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalMessage').innerText = message;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Sedikit delay untuk animasi scale-in
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+        }
+
+        document.getElementById('modalCloseBtn').addEventListener('click', () => {
+            const modal = document.getElementById('customModal');
+            const modalContent = document.getElementById('modalContent');
+            modalContent.classList.remove('scale-100', 'opacity-100');
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 300); // Waktu transisi css
+        });
+
+        // Menangani input file gambar
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentBase64Image = event.target.result;
+                
+                // Tampilkan Preview
+                imagePreview.src = currentBase64Image;
+                uploadPlaceholder.classList.add('hidden');
+                imagePreviewContainer.classList.remove('hidden');
+                uploadArea.classList.remove('p-8');
+                uploadArea.classList.add('p-2'); // Kurangi padding jika ada gambar
+
+                // Jalankan ekstraksi teks (OCR) secara otomatis
+                extractDataFromReceipt(currentBase64Image);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Menghapus gambar yang sudah dipilih
+        removeImageBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Cegah upload form memicu label click
+            e.stopPropagation();
+            resetImageInput();
+        });
+
+        function resetImageInput() {
+            imageInput.value = '';
+            currentBase64Image = null;
+            imagePreview.src = '';
+            imagePreviewContainer.classList.add('hidden');
+            uploadPlaceholder.classList.remove('hidden');
+            uploadArea.classList.remove('p-2');
+            uploadArea.classList.add('p-8');
+        }
+
+        // Menjalankan OCR (Optical Character Recognition)
+        async function extractDataFromReceipt(base64Image) {
+            showLoading("Memindai Nominal Bukti Transfer (AI)...");
+            
+            try {
+                // Tesseract memproses gambar dan mengekstrak semua teks (menggunakan Bahasa Indonesia & Inggris)
+                const result = await Tesseract.recognize(
+                    base64Image,
+                    'ind+eng',
+                    { logger: m => {
+                        // Jika Anda ingin melihat progress tesseract, bisa log `m` ke console
+                    }}
+                );
+                
+                const text = result.data.text;
+                console.log("Teks yang terdeteksi OCR:", text);
+                
+                // Fungsi pencarian Regex untuk menemukan Nominal (Rp)
+                let amountStr = findMaxAmount(text);
+                
+                // Menemukan tanggal (Opsional, karena format bank sangat bervariasi)
+                // Sementara date tetap default ke hari ini
+                
+                hideLoading();
+
+                if (amountStr) {
+                    amountInput.value = amountStr;
+                    showModal('info', 'Data Ditemukan', `Nominal otomatis terisi: Rp ${parseInt(amountStr).toLocaleString('id-ID')}. Silakan cek ulang dan tambahkan keterangan.`);
+                    // Arahkan fokus pengguna ke Keterangan
+                    descInput.focus();
+                } else {
+                    showModal('error', 'Nominal Tidak Ditemukan', 'AI kami kesulitan membaca angka pada foto tersebut. Silakan ketik nominal secara manual.');
+                    amountInput.focus();
+                }
+
+            } catch (error) {
+                hideLoading();
+                console.error("OCR Error: ", error);
+                showModal('error', 'Gagal Memindai', 'Terjadi kesalahan sistem saat mencoba membaca gambar. Silakan isi form manual.');
+            }
+        }
+
+        // Logika Regex cerdas untuk menemukan angka terbesar (kemungkinan besar nominal transfer)
+        function findMaxAmount(text) {
+            console.log("Teks mentah dari OCR:\n", text);
+            let candidates = [];
+            
+            // 1. Cari angka yang diformat dengan titik/koma sebagai pemisah ribuan (Misal: 1.500.000 atau 1,500,000)
+            // Ini sangat ampuh membedakan nominal uang dari nomor rekening atau ID referensi yang tanpa pemisah.
+            const formattedMoneyRegex = /\b\d{1,3}(?:[\.\,]\d{3})+\b/g;
+            let match;
+            
+            while ((match = formattedMoneyRegex.exec(text)) !== null) {
+                // Hapus semua titik dan koma dari hasil temuan (contoh: "1.500.000" -> "1500000")
+                let rawStr = match[0].replace(/[\.\,]/g, '');
+                let num = parseInt(rawStr, 10);
+                
+                // Filter: Hanya terima nominal yang rasional untuk proyek (di atas Rp 10.000)
+                if (num >= 10000) {
+                    candidates.push(num);
+                }
+            }
+            
+            // 2. Fallback: Jika tidak ada format ribuan (misal OCR gagal baca titik karena gambar blur), 
+            // cari angka berapapun yang lokasinya berdekatan dengan kata 'Rp' atau 'IDR'
+            if (candidates.length === 0) {
+                const fallbackRegex = /(?:RP|IDR)\s*[\.\:\-]?\s*(\d{4,12})\b/ig;
+                while ((match = fallbackRegex.exec(text)) !== null) {
+                    let num = parseInt(match[1], 10);
+                    if (num >= 10000) {
+                        candidates.push(num);
+                    }
+                }
+            }
+
+            console.log("Kandidat nominal yang ditemukan:", candidates);
+
+            // Jika ada angka yang ditemukan, ambil yang paling besar 
+            // (Mengatasi kasus dimana struk menampilkan biaya admin Rp 2.500, nominal utama selalu lebih besar)
+            if (candidates.length > 0) {
+                let maxAmount = Math.max(...candidates);
+                return maxAmount.toString();
+            }
+
+            return null;
+        }
+
+        // Menangani pengiriman form dan foto ke backend
+        submitBtn.addEventListener('click', async () => {
+            // 1. Validasi Form
+            if (!currentBase64Image) {
+                showModal('error', 'Input Tidak Lengkap', 'Silakan upload foto bukti transfer terlebih dahulu.');
+                return;
+            }
+            if (!dateInput.value || !amountInput.value || !descInput.value) {
+                showModal('error', 'Input Tidak Lengkap', 'Mohon lengkapi Tanggal, Nominal, dan Keterangan.');
+                return;
+            }
+            
+            if(APP_SCRIPT_URL === "ISI_URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI") {
+                showModal('error', 'Konfigurasi Diperlukan', 'Developer Note: Harap ganti variabel APP_SCRIPT_URL pada source code HTML dengan Web App URL Google Apps Script Anda.');
+                return;
+            }
+
+            // Siapkan payload
+            const fileName = `Bukti_${new Date().getTime()}.jpg`;
+            const payload = {
+                date: dateInput.value,
+                amount: amountInput.value,
+                description: descInput.value,
+                image: currentBase64Image,
+                filename: fileName
+            };
+
+            showLoading("Mengirim Data & Gambar ke Cloud...");
+            submitBtn.disabled = true;
+
+            try {
+                // Eksekusi POST Request
+                const response = await fetch(APP_SCRIPT_URL, {
+                    method: 'POST',
+                    // mode: 'no-cors' - Kami mem-bypass no-cors dan menggunakan CORS standar karena App Script doPost
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                hideLoading();
+                submitBtn.disabled = false;
+
+                if (result.status === 'success') {
+                    showModal('success', 'Berhasil Tersimpan', 'Data keuangan dan bukti foto sukses disimpan di Spreadsheet & Drive.');
+                    
+                    // Reset Form
+                    resetImageInput();
+                    amountInput.value = '';
+                    descInput.value = '';
+                    dateInput.value = new Date().toISOString().split('T')[0];
+                } else {
+                    showModal('error', 'Gagal Tersimpan', 'Error Server: ' + result.message);
+                }
+                
+            } catch (error) {
+                hideLoading();
+                submitBtn.disabled = false;
+                console.error("Upload Error:", error);
+                showModal('error', 'Gagal Tersimpan', 'Tidak dapat terhubung ke server Google. Pastikan internet aktif dan URL Apps Script benar (CORS Issues).');
+            }
+        });
+    </script>
+</body>
+</html>
