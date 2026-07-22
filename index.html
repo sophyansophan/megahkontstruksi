@@ -408,73 +408,106 @@
                     }
                 };
 
-                // 4. Panggil Gemini API (Menggunakan Model Flash yang cepat)
-                const apiKey = "AQ.Ab8RN6KmkVKNOLt-Qz9HWmt6awVSsS91qlLmNyjXt2Y5hd9Yqw"; // DEVELOPER NOTE: Isi API Key Anda di sini sebelum diupload ke GitHub.
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+                // 4. Daftar Model Gemini dengan Urutan Prioritas (Pro -> Flash -> Flash Lite)
+                const models = [
+                    "gemini-3.1-pro",
+                    "gemini-3.6-flash",
+                    "gemini-3.5-flash-lite"
+                ];
 
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const apiKey = "AQ.Ab8RN6K-lHUmt-GjM_FI10n6-9RoINqOQoDjRtqqFqyIpH7H2Q"; // DEVELOPER NOTE: Isi ulang API Key Anda di sini
+                let result = null;
+                let fetchSuccess = false;
 
-                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                // 5. Looping Fallback (Coba satu per satu dari yang paling Pro)
+                for (const modelName of models) {
+                    console.log(`[AI] Mencoba mengekstrak menggunakan model: ${modelName}...`);
+                    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
 
-                const result = await response.json();
-                
-                // 5. Parse Hasil JSON dari Gemini
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
-                    const jsonString = result.candidates[0].content.parts[0].text;
-                    const parsedData = JSON.parse(jsonString);
-                    
-                    console.log("Hasil Ekstraksi Gemini:", parsedData);
-                    hideLoading();
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
 
-                    // 6. Masukkan Hasil Gemini ke dalam Form
-                    if(parsedData.date) document.getElementById('dateInput').value = parsedData.date;
-                    if(parsedData.sourceBank) document.getElementById('sourceBankInput').value = parsedData.sourceBank;
-                    if(parsedData.sourceName) document.getElementById('sourceNameInput').value = parsedData.sourceName;
-                    if(parsedData.destBank) document.getElementById('destBankInput').value = parsedData.destBank;
-                    if(parsedData.destAccount) document.getElementById('destAccountInput').value = parsedData.destAccount;
-                    if(parsedData.destName) document.getElementById('destNameInput').value = parsedData.destName;
-                    if(parsedData.refNumber) document.getElementById('refNumberInput').value = parsedData.refNumber;
-                    if(parsedData.amount) document.getElementById('amountInput').value = parsedData.amount;
-                    if(parsedData.adminFee) document.getElementById('adminFeeInput').value = parsedData.adminFee;
-
-                    showModal('info', 'Sukses Dipindai', 'Data berhasil diekstrak oleh kecerdasan Gemini AI. Silakan periksa dan tambahkan keterangan.');
-                    document.getElementById('descInput').focus();
-
-                } else {
-                    throw new Error("Gagal mendapatkan respons valid dari Gemini.");
+                        if (response.ok) {
+                            result = await response.json();
+                            fetchSuccess = true;
+                            console.log(`[AI] Sukses! Data berhasil dibaca menggunakan: ${modelName}`);
+                            break; // Keluar dari loop pencarian jika sudah berhasil
+                        } else {
+                            // Jika error (misal 429 limit tercapai, atau 500 server sibuk)
+                            console.warn(`[AI] Model ${modelName} gagal (Status: ${response.status}). Mencoba model cadangan selanjutnya...`);
+                        }
+                    } catch (e) {
+                        // Jika terjadi error jaringan terputus
+                        console.warn(`[AI] Network error saat mencoba ${modelName}:`, e.message);
+                    }
                 }
 
-            } catch (error) {
+                // Jika semua model dalam daftar gagal
+                if (!fetchSuccess || !result) {
+                    throw new Error("Semua tingkat model Gemini (Pro, Flash, Flash Lite) sedang limit atau tidak dapat diakses saat ini.");
+                }
+                
+                // 6. Parse Hasil JSON dari Gemini
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+                    // Gemini terkadang membungkus JSON dengan markdown ```json ... ```, kita harus membersihkannya
+                    let jsonString = result.candidates[0].content.parts[0].text;
+                    jsonString = jsonString.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    
+                    try {
+                        const parsedData = JSON.parse(jsonString);
+                        console.log("Hasil Ekstraksi Gemini:", parsedData);
+                        hideLoading();
+
+                        // 7. Masukkan Hasil Ekstraksi Gemini ke dalam Form
+                        if(parsedData.date) dateInput.value = parsedData.date;
+                        if(parsedData.sourceBank) sourceBankInput.value = parsedData.sourceBank;
+                        if(parsedData.sourceName) sourceNameInput.value = parsedData.sourceName;
+                        if(parsedData.destBank) destBankInput.value = parsedData.destBank;
+                        if(parsedData.destAccount) destAccountInput.value = parsedData.destAccount;
+                        if(parsedData.destName) destNameInput.value = parsedData.destName;
+                        if(parsedData.refNumber) refNumberInput.value = parsedData.refNumber;
+                        if(parsedData.amount) amountInput.value = parsedData.amount;
+                        if(parsedData.adminFee) adminFeeInput.value = parsedData.adminFee;
+
+                        showModal('success', 'Berhasil Diekstrak', 'Data berhasil dibaca oleh AI. Silakan cek kembali dan isi keterangan/keperluan transfer.');
+                    } catch (parseError) {
+                        console.error("Gagal parse JSON:", parseError, "String dari Gemini:", jsonString);
+                        hideLoading();
+                        showModal("error", "Format AI Salah", "AI mengembalikan format yang tidak dikenali.");
+                    }
+                }
+            } catch (e) {
+                console.error("Keseluruhan Error AI:", e);
                 hideLoading();
-                console.error("Gemini API Error: ", error);
-                showModal('error', 'Gagal Memindai', 'Gagal memproses gambar menggunakan Gemini API. Silakan pastikan API Key sudah benar dan koneksi internet stabil.');
+                showModal("error", "Koneksi AI Gagal", e.message || "Gagal memproses gambar menggunakan AI. Silakan isi manual.");
             }
-        }
+        } // Penutup fungsi extractDataFromReceipt yang sebelumnya hilang
 
         // =========================================================================
-        // Menangani pengiriman form dan foto ke backend Google Apps Script
+        // FUNGSI SIMPAN DATA KE GOOGLE APPS SCRIPT (CLOUD)
         // =========================================================================
-        submitBtn.addEventListener('click', async () => {
-            // 1. Validasi Form
+        submitBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+
             if (!currentBase64Image) {
                 showModal('error', 'Input Tidak Lengkap', 'Silakan upload foto bukti transfer terlebih dahulu.');
                 return;
             }
             if (!dateInput.value || !amountInput.value || !descInput.value) {
-                showModal('error', 'Input Tidak Lengkap', 'Mohon lengkapi Tanggal, Nominal, dan Keterangan.');
+                showModal('error', 'Input Tidak Lengkap', 'Mohon lengkapi Tanggal, Nominal (Rp), dan Keterangan.');
                 return;
             }
             
-            if(APP_SCRIPT_URL === "https://script.google.com/macros/s/AKfycby-QuJfwSiq-IuT5SPdbQ0jNyRuTek618pb9XT8bBgk5b5yhqfGEi0n0vzZOLUs8bYc/exec") {
+            if(APP_SCRIPT_URL === "ISI_URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI" || APP_SCRIPT_URL.trim() === "") {
                 showModal('error', 'Konfigurasi Diperlukan', 'Developer Note: Harap ganti variabel APP_SCRIPT_URL pada source code HTML dengan Web App URL Google Apps Script Anda.');
                 return;
             }
 
-            // Siapkan payload dengan field baru
+            // Siapkan payload dengan field lengkap
             const fileName = `Bukti_${new Date().getTime()}.jpg`;
             const payload = {
                 date: dateInput.value,
@@ -495,10 +528,9 @@
             submitBtn.disabled = true;
 
             try {
-                // Eksekusi POST Request
+                // Eksekusi POST Request ke Google Apps Script
                 const response = await fetch(APP_SCRIPT_URL, {
                     method: 'POST',
-                    // mode: 'no-cors' - Kami mem-bypass no-cors dan menggunakan CORS standar karena App Script doPost
                     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
@@ -510,7 +542,7 @@
                 if (result.status === 'success') {
                     showModal('success', 'Berhasil Tersimpan', 'Data keuangan dan bukti foto sukses disimpan di Spreadsheet & Drive.');
                     
-                    // Reset Form
+                    // Reset Form kembali ke keadaan semula
                     resetImageInput();
                     document.getElementById('dataForm').reset();
                     dateInput.value = new Date().toISOString().split('T')[0];
@@ -523,7 +555,7 @@
                 hideLoading();
                 submitBtn.disabled = false;
                 console.error("Upload Error:", error);
-                showModal('error', 'Gagal Tersimpan', 'Tidak dapat terhubung ke server Google. Pastikan internet aktif dan URL Apps Script benar (CORS Issues).');
+                showModal('error', 'Gagal Tersimpan', 'Tidak dapat terhubung ke server Google. Pastikan internet aktif dan URL Apps Script benar.');
             }
         });
     </script>
